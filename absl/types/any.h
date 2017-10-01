@@ -94,6 +94,18 @@ namespace absl {
 
 namespace any_internal {
 
+template <typename Type>
+struct TypeTag {
+  constexpr static char dummy_var = 0;
+  const static size_t value;
+};
+
+template <typename Type>
+constexpr char TypeTag<Type>::dummy_var;
+
+template <typename Type>
+const size_t TypeTag<Type>::value = reinterpret_cast<uintptr_t>(&dummy_var);
+
 // FastTypeId<Type>() evaluates at compile/link-time to a unique integer for the
 // passed in type. Their values are neither contiguous nor small, making them
 // unfit for using as an index into a vector, but a good match for keys into
@@ -103,14 +115,10 @@ namespace any_internal {
 // 32-bit integer. While a client should never do that it SHOULD still be safe,
 // assuming the BSS segment doesn't span more than 4GiB.
 template<typename Type>
-inline size_t FastTypeId() {
+constexpr inline size_t FastTypeId() {
   static_assert(sizeof(char*) <= sizeof(size_t),
                 "ptr size too large for size_t");
-
-  // This static variable isn't actually used, only its address, so there are
-  // no concurrency issues.
-  static char dummy_var;
-  return reinterpret_cast<size_t>(&dummy_var);
+  return TypeTag<Type>::value;
 }
 
 }  // namespace any_internal
